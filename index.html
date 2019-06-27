@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <link rel="stylesheet" href="./index.css">
+    <title>Jinjiang Statistics</title>
+  </head>
+  <body style="margin: 0">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <div style="position: fixed; bottom: 0; width: 100%;">
+      <table class="navbar">
+        <tr>
+          <td>
+            <input type="button" value="用户统计" onclick="onUserClick()">
+          </td>
+          <td>
+            <input type="button" value="系统统计">
+          </td>
+          <td>
+            <input type="button" value="分享统计">
+          </td>
+          <td>
+            <input type="button" value="选择统计">
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="tab1" class="tab">
+      <div style="text-align: center; position: fixed; bottom: 150px; width: 100%;">
+          <table class="select-bar">
+            <tr>
+              <td>
+                <input type="button" value="月">
+              </td>
+              <td>
+                <input type="button" value="周">
+              </td>
+              <td>
+                <input type="button" value="日">
+              </td>
+              <td>
+                <input type="button" value="时">
+              </td>
+            </tr>
+          </table>
+        </div>
+      <canvas id="myChart" width="400" height="400"></canvas>
+    </div>
+    <div id="log"></div>
+    <script>
+
+      function log(info) {
+        var log = document.getElementById('log');
+        log.innerText = info+'';
+      }
+
+      function onUserClick() {
+        axios.get('http://www.fullrank.top:8000/api/stat/hour/').then(function (resp) {
+          log(resp);
+        })
+      }
+
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+            datasets: [{
+                label: '访问次数',
+                data: [12, 19, 3, 5, 2, 3],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    }
+                }]
+            }
+        }
+    });
+    </script>
+  </body>
+</html>

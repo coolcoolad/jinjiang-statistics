@@ -18,7 +18,7 @@
             <input type="button" value="用户统计" onclick="onUserClick()">
           </td>
           <td>
-            <input type="button" value="系统统计">
+            <input type="button" value="系统统计" onclick="onOsClick()">
           </td>
           <td>
             <input type="button" value="分享统计">
@@ -35,16 +35,16 @@
           <table class="select-bar">
             <tr>
               <td>
-                <input type="button" value="月">
+                <input type="button" value="月" onclick="onMonthClick()">
               </td>
               <td>
-                <input type="button" value="周">
+                <input type="button" value="周" onclick="onWeekClick()">
               </td>
               <td>
-                <input type="button" value="日">
+                <input type="button" value="日" onclick="onDayClick()">
               </td>
               <td>
-                <input type="button" value="时">
+                <input type="button" value="时" onclick="onHourClick()">
               </td>
             </tr>
           </table>
@@ -53,39 +53,115 @@
     </div>
     <div id="log"></div>
     <script>
+      var chartData = {
+        labels: ['No Data'],
+        datasets: [{
+            label: '访问次数',
+            data: [0],
+            borderWidth: 1
+        }]
+      };
+      var ctx = document.getElementById('myChart').getContext('2d');
+      var myChart = new Chart(ctx, {
+          type: 'bar',
+          data: chartData,
+          options: {
+              scales: {
+                  yAxes: [{
+                      ticks: {
+                          beginAtZero: true
+                      }
+                  }]
+              }
+          }
+      });
 
       function log(info) {
         var log = document.getElementById('log');
         log.innerText = info+'';
       }
 
-      function onUserClick() {
-        axios.get('http://www.fullrank.top:8000/api/stat/hour/').then(function (resp) {
-          log(resp);
+      function updateChart() {
+        myChart = new Chart(ctx, {
+          type: 'bar',
+          data: chartData,
+          options: {
+              scales: {
+                  yAxes: [{
+                      ticks: {
+                          beginAtZero: true
+                      }
+                  }]
+              }
+          }
+        });
+      }
+
+      function updateDayChartData() {
+        axios.get(`http://www.fullrank.top:8000/api/stat/day/`).then(function (resp) {
+          // var jsonStr = resp.data;
+          // console.log(jsonStr);
+          // var json = JSON.parse(jsonStr);
+          var json = resp.data;
+          var set = new Set([]);
+          for (var i=0; i < json.length; i++) {
+            var ele = json[i];
+            chartData.labels[ele[tag]] = ele[tag]+'';
+            chartData.datasets[0].data[ele[tag]] = ele.count;
+            set.add(ele[tag]);
+          }
+          for (var i=0; i < 24; i++) {
+            if (set.has(i) === false) {
+              chartData.labels[i] = i+'';
+              chartData.datasets[0].data[i] = 0;
+            }
+          }
+          updateChart();
         })
       }
 
-    var ctx = document.getElementById('myChart').getContext('2d');
-    var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-            datasets: [{
-                label: '访问次数',
-                data: [12, 19, 3, 5, 2, 3],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true
-                    }
-                }]
+      function updateChartData(tag) {
+        axios.get(`http://www.fullrank.top:8000/api/stat/${tag}/`).then(function (resp) {
+          var jsonStr = resp.data;
+          var json = JSON.parse(jsonStr);
+          var set = new Set([]);
+          for (var i=0; i < json.length; i++) {
+            var ele = json[i];
+            chartData.labels[ele[tag]] = ele[tag]+'';
+            chartData.datasets[0].data[ele[tag]] = ele.count;
+            set.add(ele[tag]);
+          }
+          for (var i=0; i < 24; i++) {
+            if (set.has(i) === false) {
+              chartData.labels[i] = i+'';
+              chartData.datasets[0].data[i] = 0;
             }
-        }
-    });
+          }
+          updateChart();
+        })
+      }
+
+      function onMonthClick() {
+        updateChartData('month');
+      }
+
+      function onWeekClick() {
+        updateChartData('week');
+      }
+
+      function onDayClick() {
+        updateDayChartData();
+      }
+
+      function onHourClick() {
+        updateChartData('hour');
+      }
+
+      function onUserClick() {
+        onHourClick();
+      }
+
+      onHourClick();
     </script>
   </body>
 </html>

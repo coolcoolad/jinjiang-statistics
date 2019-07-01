@@ -59,6 +59,7 @@
     
     <div id="tab2" class="tab">
       <canvas id="myChart2" width="400" height="400"></canvas>
+      <div style="text-align: center">总数：<span id="total">0</span></div>
     </div>
 
     <div id="log"></div>
@@ -141,17 +142,37 @@
         })
       }
 
+      function getRealLabel(label) {
+        switch(label) {
+          case 'android': return '安卓';
+          case '1': return '低调星人';
+          case '2': return '游戏爱好者';
+          case '3': return '旅行达人';
+          case '4': return '寻找真爱';
+          case '5': return '逃离星球';
+          case '6': return '铲屎官';
+          case 'friends': return '朋友圈';
+          case 'moments': return '转发';
+          default: return label;
+        }
+      }
+
       function updateChartData2(tag) {
         axios.get(`http://www.fullrank.top:8000/api/stat/${tag}/`).then(function (resp) {
           var json = resp.data;
           json.sort((a, b) => {
             return a[tag] > b[tag];
           });
+          var sum = 0;
+          for (var i=0; i < json.length; i++) {
+            var ele = json[i];
+            sum += ele.created_count;
+          }
           chartData = deepCloneJson(defaultData);
           for (var i=0; i < json.length; i++) {
             var ele = json[i];
-            chartData.labels[i] = ele[tag]+'';
-            chartData.datasets[0].data[i] = ele.created_count;
+            chartData.labels[i] = getRealLabel(ele[tag]+'');
+            chartData.datasets[0].data[i] = (ele.created_count / sum * 1.0).toFixed(2);
           }
           chartData.datasets[0].backgroundColor = [
             window.chartColors.red,
@@ -161,6 +182,8 @@
 						window.chartColors.blue,
 						window.chartColors.purple
           ];
+          var total = document.getElementById('total');
+          total.innerText = sum+'';
           updateChart2();
         })
       }

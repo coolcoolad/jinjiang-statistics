@@ -35,16 +35,20 @@
           <table class="select-bar">
             <tr>
               <td>
-                <input type="button" value="月" onclick="onMonthClick()">
+                <input id="month" class="radio" type="radio" value="月" name="month" onclick="onMonthClick()">
+                <label>月</label>
               </td>
               <td>
-                <input type="button" value="周" onclick="onWeekClick()">
+                <input id="week" class="radio" type="radio" value="周" name="week" onclick="onWeekClick()">
+                <label>周</label>
               </td>
               <td>
-                <input type="button" value="日" onclick="onDayClick()">
+                <input id="day" class="radio" type="radio" value="日" name="day" onclick="onDayClick()">
+                <label>日</label>
               </td>
               <td>
-                <input type="button" value="时" onclick="onHourClick()">
+                <input id="hour" class="radio" type="radio" value="时" name="hour" onclick="onHourClick()">
+                <label>时</label>
               </td>
             </tr>
           </table>
@@ -53,7 +57,11 @@
     </div>
     <div id="log"></div>
     <script>
-      var chartData = {
+      function deepCloneJson(json) {
+        return JSON.parse(JSON.stringify(json));
+      }
+
+      var defaultData = {
         labels: ['No Data'],
         datasets: [{
             label: '访问次数',
@@ -61,6 +69,7 @@
             borderWidth: 1
         }]
       };
+      var chartData = deepCloneJson(defaultData);
       var ctx = document.getElementById('myChart').getContext('2d');
       var myChart = new Chart(ctx, {
           type: 'bar',
@@ -99,22 +108,16 @@
 
       function updateDayChartData() {
         axios.get(`http://www.fullrank.top:8000/api/stat/day/`).then(function (resp) {
-          // var jsonStr = resp.data;
-          // console.log(jsonStr);
-          // var json = JSON.parse(jsonStr);
+          tag = 'date_created';
           var json = resp.data;
-          var set = new Set([]);
+          json.sort((a, b) => {
+            return a[tag] > b[tag];
+          });
+          chartData = deepCloneJson(defaultData);
           for (var i=0; i < json.length; i++) {
             var ele = json[i];
-            chartData.labels[ele[tag]] = ele[tag]+'';
-            chartData.datasets[0].data[ele[tag]] = ele.count;
-            set.add(ele[tag]);
-          }
-          for (var i=0; i < 24; i++) {
-            if (set.has(i) === false) {
-              chartData.labels[i] = i+'';
-              chartData.datasets[0].data[i] = 0;
-            }
+            chartData.labels[i] = ele[tag]+'';
+            chartData.datasets[0].data[i] = ele.created_count;
           }
           updateChart();
         })
@@ -125,13 +128,21 @@
           var jsonStr = resp.data;
           var json = JSON.parse(jsonStr);
           var set = new Set([]);
+          chartData = deepCloneJson(defaultData);
           for (var i=0; i < json.length; i++) {
             var ele = json[i];
             chartData.labels[ele[tag]] = ele[tag]+'';
             chartData.datasets[0].data[ele[tag]] = ele.count;
             set.add(ele[tag]);
           }
-          for (var i=0; i < 24; i++) {
+          var maxLabel = 0;
+          switch(tag) {
+            case 'month': maxLabel = 12; break;
+            case 'week': maxLabel = Math.max(json.map(x => x[tag]))+1; break;
+            case 'hour': maxLabel = 24; break;
+            default: maxLabel = 0;
+          }
+          for (var i=0; i < maxLabel; i++) {
             if (set.has(i) === false) {
               chartData.labels[i] = i+'';
               chartData.datasets[0].data[i] = 0;
@@ -141,19 +152,43 @@
         })
       }
 
+      function setCheckedRadio(name) {
+        var radios = document.getElementsByClassName('radio');
+        for (var i=0; i< radios.length; i++) {
+          var radio = radios.item(i);
+          if (radio.name === name) {
+            radio.checked = true;
+          } else {
+            radio.checked = false;
+          }
+        }
+        // var hour = document.getElementById('hour');
+        // hour.setAttribute('checked', 'checked');
+        // var month = document.getElementById('month');
+        // month.removeAttribute('checked');
+        // var week = document.getElementById('week');
+        // week.removeAttribute('checked');
+        // var day = document.getElementById('day');
+        // day.removeAttribute('checked');
+      }
+
       function onMonthClick() {
+        setCheckedRadio('month');
         updateChartData('month');
       }
 
       function onWeekClick() {
+        setCheckedRadio('week');
         updateChartData('week');
       }
 
       function onDayClick() {
+        setCheckedRadio('day');
         updateDayChartData();
       }
 
       function onHourClick() {
+        setCheckedRadio('hour');
         updateChartData('hour');
       }
 

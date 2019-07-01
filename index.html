@@ -8,7 +8,8 @@
     <title>Jinjiang Statistics</title>
   </head>
   <body style="margin: 0">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.7.3/dist/Chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@0.5.0"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
     <div style="position: fixed; bottom: 0; width: 100%;">
@@ -21,10 +22,10 @@
             <input type="button" value="系统统计" onclick="onOsClick()">
           </td>
           <td>
-            <input type="button" value="分享统计">
+            <input type="button" value="分享统计" onclick="onShareClick()">
           </td>
           <td>
-            <input type="button" value="选择统计">
+            <input type="button" value="选择统计" onclick="onSelectionClick()">
           </td>
         </tr>
       </table>
@@ -55,35 +56,38 @@
         </div>
       <canvas id="myChart" width="400" height="400"></canvas>
     </div>
+    
+    <div id="tab2" class="tab">
+      <canvas id="myChart2" width="400" height="400"></canvas>
+    </div>
+
     <div id="log"></div>
     <script>
       function deepCloneJson(json) {
         return JSON.parse(JSON.stringify(json));
       }
 
+      window.chartColors = {
+        red: 'rgb(255, 99, 132)',
+        orange: 'rgb(255, 159, 64)',
+        yellow: 'rgb(255, 205, 86)',
+        green: 'rgb(75, 192, 192)',
+        blue: 'rgb(54, 162, 235)',
+        purple: 'rgb(153, 102, 255)',
+        grey: 'rgb(201, 203, 207)'
+      };
+
       var defaultData = {
         labels: ['No Data'],
         datasets: [{
-            label: '访问次数',
+            label: '用户数',
             data: [0],
             borderWidth: 1
         }]
       };
       var chartData = deepCloneJson(defaultData);
-      var ctx = document.getElementById('myChart').getContext('2d');
-      var myChart = new Chart(ctx, {
-          type: 'bar',
-          data: chartData,
-          options: {
-              scales: {
-                  yAxes: [{
-                      ticks: {
-                          beginAtZero: true
-                      }
-                  }]
-              }
-          }
-      });
+      var ctx = null;
+      var config = {};
 
       function log(info) {
         var log = document.getElementById('log');
@@ -91,19 +95,33 @@
       }
 
       function updateChart() {
-        myChart = new Chart(ctx, {
+        config = {
           type: 'bar',
           data: chartData,
           options: {
-              scales: {
-                  yAxes: [{
-                      ticks: {
-                          beginAtZero: true
-                      }
-                  }]
-              }
+            scales: {
+              yAxes: [{
+                  ticks: {
+                    beginAtZero: true
+                  }
+              }]
+            }
           }
-        });
+        };
+        ctx = document.getElementById('myChart').getContext('2d');
+        myChart = new Chart(ctx, config);
+      }
+
+      function updateChart2() {
+        config = {
+          type: 'pie',
+          data: chartData,
+          options: {
+            responsive: true
+          }
+        };
+        ctx = document.getElementById('myChart2').getContext('2d');
+        myChart = new Chart(ctx, config);
       }
 
       function updateDayChartData() {
@@ -123,10 +141,37 @@
         })
       }
 
+      function updateChartData2(tag) {
+        axios.get(`http://www.fullrank.top:8000/api/stat/${tag}/`).then(function (resp) {
+          var json = resp.data;
+          json.sort((a, b) => {
+            return a[tag] > b[tag];
+          });
+          chartData = deepCloneJson(defaultData);
+          for (var i=0; i < json.length; i++) {
+            var ele = json[i];
+            chartData.labels[i] = ele[tag]+'';
+            chartData.datasets[0].data[i] = ele.created_count;
+          }
+          chartData.datasets[0].backgroundColor = [
+            window.chartColors.red,
+						window.chartColors.orange,
+						window.chartColors.yellow,
+						window.chartColors.green,
+						window.chartColors.blue,
+						window.chartColors.purple
+          ];
+          updateChart2();
+        })
+      }
+
       function updateChartData(tag) {
         axios.get(`http://www.fullrank.top:8000/api/stat/${tag}/`).then(function (resp) {
           var jsonStr = resp.data;
           var json = JSON.parse(jsonStr);
+          json.sort((a, b) => {
+            return a[tag] > b[tag];
+          });
           var set = new Set([]);
           chartData = deepCloneJson(defaultData);
           for (var i=0; i < json.length; i++) {
@@ -162,14 +207,18 @@
             radio.checked = false;
           }
         }
-        // var hour = document.getElementById('hour');
-        // hour.setAttribute('checked', 'checked');
-        // var month = document.getElementById('month');
-        // month.removeAttribute('checked');
-        // var week = document.getElementById('week');
-        // week.removeAttribute('checked');
-        // var day = document.getElementById('day');
-        // day.removeAttribute('checked');
+      }
+
+      function showTab(id) {
+        var tabs = document.getElementsByClassName('tab');
+        for (var i=0; i < tabs.length; i++) {
+          var tab = tabs.item(i);
+          if (tab.id === id) {
+            tab.style.display = 'block';
+          } else {
+            tab.style.display = 'none';
+          }
+        }
       }
 
       function onMonthClick() {
@@ -193,10 +242,26 @@
       }
 
       function onUserClick() {
+        showTab('tab1');
         onHourClick();
       }
 
-      onHourClick();
+      function onOsClick() {
+        showTab('tab2');
+        updateChartData2('device');
+      }
+
+      function onShareClick() {
+        showTab('tab2');
+        updateChartData2('operation');
+      }
+
+      function onSelectionClick() {
+        showTab('tab2');
+        updateChartData2('choice');
+      }
+
+      onUserClick();
     </script>
   </body>
 </html>
